@@ -12,8 +12,9 @@ import { ResourceService } from "./resource.service";
 import { AdminChatController } from "./admin-chat.controller";
 import { ChatGateway } from "./chat.gateway";
 import { ChatService } from "./chat.service";
+import { EmailService } from "./email.service";
 
 const realtimeProviders = process.env.VERCEL ? [] : [ChatGateway];
 
-@Module({ imports: [MongooseModule.forFeature(businessModels), AuthModule], controllers: [PublicController, AdminChatController, AdminResourcesController, ActionsController], providers: [ResourceService, PublicService, BotProtectionService, ActionsService, ChatService, ...realtimeProviders], exports: [ResourceService, ChatService] })
+@Module({ imports: [MongooseModule.forFeature(businessModels), AuthModule], controllers: [PublicController, AdminChatController, AdminResourcesController, ActionsController], providers: [ResourceService, PublicService, BotProtectionService, ActionsService, ChatService, EmailService, ...realtimeProviders], exports: [ResourceService, ChatService] })
 export class ResourcesModule {}

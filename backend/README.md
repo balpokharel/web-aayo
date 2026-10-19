@@ -21,6 +21,7 @@ Production-oriented NestJS API for the Web Aayo public website and admin portal.
 
 ## Production notes
 
+- Contact-form messages are saved to MongoDB and sent to `CONTACT_NOTIFICATION_EMAIL` through SMTP. For Gmail, use `smtp.gmail.com`, port `587`, and a Google App Password (not your normal account password). Configure `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, and `CONTACT_NOTIFICATION_EMAIL` in the backend's local `.env` and Vercel project environment, then redeploy the backend.
 - Use a least-privilege MongoDB Atlas user with TLS and IP restrictions.
 - Use managed Redis for distributed throttling/queues as traffic grows; the core API does not fail when Redis is unavailable.
 - Store uploads in Cloudinary or equivalent object storage. MongoDB stores metadata and URLs only.

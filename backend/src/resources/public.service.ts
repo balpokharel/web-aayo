@@ -3,12 +3,24 @@ import { InjectConnection } from "@nestjs/mongoose";
 import type { Connection } from "mongoose";
 import { randomBytes } from "node:crypto";
 import { AnalyticsDto, ContactDto, NewsletterDto, QuoteDto } from "./public.dto";
+import { EmailService } from "./email.service";
 
 @Injectable()
-export class PublicService { constructor(@InjectConnection() private readonly connection: Connection) {}
+export class PublicService { constructor(@InjectConnection() private readonly connection: Connection, private readonly email: EmailService) {}
   private reference(prefix: string) { return `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${randomBytes(3).toString("hex").toUpperCase()}`; }
   async quote(dto: QuoteDto) { if (dto.companyWebsite) return { leadId: this.reference("WA") }; const leadId = this.reference("WA"); const safe = { ...dto, email: dto.email.toLowerCase(), companyWebsite: undefined, turnstileToken: undefined }; const lead = await this.connection.model("Lead").create({ ...safe, leadId, status: "new" }); await Promise.all([this.connection.model("QuoteRequest").create({ leadId: lead._id, requestId: leadId, payloadSnapshot: safe, status: "new" }), this.connection.model("Notification").create({ type: "new_quote", title: "New quote request", message: `${dto.fullName} requested ${dto.service}`, link: `/admin/leads/${lead._id}`, metadata: { leadId: lead._id } }), this.connection.model("ActivityLog").create({ action: "quote_submitted", resource: "leads", resourceId: lead._id, message: `Quote ${leadId} submitted` }), this.connection.model("AnalyticsEvent").create({ event: "quote_submitted", sessionId: randomBytes(16).toString("hex"), path: dto.landingPage ?? "/get-a-quote", source: dto.source, campaign: dto.utm?.campaign })]); return { leadId }; }
-  async contact(dto: ContactDto) { if (dto.companyWebsite) return { received: true }; const safe = { ...dto, email: dto.email.toLowerCase(), companyWebsite: undefined, turnstileToken: undefined, status: "new" }; const contact = await this.connection.model("Contact").create(safe); await Promise.all([this.connection.model("Notification").create({ type: "new_contact", title: "New contact message", message: `${dto.name}: ${dto.subject}`, link: `/admin/contact-messages/${contact._id}` }), this.connection.model("ActivityLog").create({ action: "contact_submitted", resource: "contacts", resourceId: contact._id, message: "New contact message received" })]); return { received: true, id: contact._id }; }
+  async contact(dto: ContactDto) {
+    if (dto.companyWebsite) return { received: true };
+
+    const safe = { ...dto, email: dto.email.toLowerCase(), companyWebsite: undefined, turnstileToken: undefined, status: "new" };
+    const contact = await this.connection.model("Contact").create(safe);
+    await Promise.all([
+      this.connection.model("Notification").create({ type: "new_contact", title: "New contact message", message: `${dto.name}: ${dto.subject}`, link: `/admin/contact-messages/${contact._id}` }),
+      this.connection.model("ActivityLog").create({ action: "contact_submitted", resource: "contacts", resourceId: contact._id, message: "New contact message received" }),
+    ]);
+    await this.email.sendContactNotification({ ...dto, email: safe.email });
+    return { received: true, id: contact._id };
+  }
   async analytics(dto: AnalyticsDto) { await this.connection.model("AnalyticsEvent").create(dto); if (dto.event === "page_view") { await Promise.all([this.connection.model("PageView").create({ sessionId: dto.sessionId, path: dto.path, referrer: dto.referrer }), this.connection.model("Visitor").updateOne({ sessionId: dto.sessionId }, { $setOnInsert: { firstSeenAt: new Date(), landingPage: dto.path, source: dto.source, campaign: dto.campaign, device: dto.device }, $set: { lastSeenAt: new Date() }, $inc: { pageViewCount: 1 } }, { upsert: true })]); } return { recorded: true }; }
   async subscribe(dto: NewsletterDto) { await this.connection.model("NewsletterSubscriber").updateOne({ email: dto.email.toLowerCase() }, { $set: { status: "subscribed", source: dto.source, consentAt: new Date(), unsubscribedAt: null } }, { upsert: true }); return { subscribed: true }; }
   async settings() { const rows = await this.connection.model("SiteSetting").find({ isPublic: true }).select("key value").lean<Array<{ key: string; value: unknown }>>(); return Object.fromEntries(rows.map((row) => [row.key, row.value])); }
