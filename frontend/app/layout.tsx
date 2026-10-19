@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
 import "./globals.css";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ChatWidget } from "@/components/chat-widget";
-
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://webaayo.com"),
@@ -18,5 +15,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className={`${manrope.variable} antialiased`}><AnalyticsTracker /><SiteHeader />{children}<SiteFooter /><ChatWidget /></body></html>;
+  return <html lang="en"><body className="antialiased"><AnalyticsTracker /><SiteHeader />{children}<SiteFooter /><ChatWidget /></body></html>;
 }

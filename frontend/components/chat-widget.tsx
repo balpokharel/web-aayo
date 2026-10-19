@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, Bot, MessageCircle, Sparkles, UserRound, X } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -67,10 +67,30 @@ export function ChatWidget() {
     return () => { socket.disconnect(); socketRef.current = null; };
   }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open, typing]);
-  const revealReply = async (message: ChatMessage) => {
+  const revealReply = useCallback(async (message: ChatMessage) => {
     const durationMs = replyDuration(message.text); const event: TypingEvent = { active: true, messageId: message._id, sender: message.sender === "admin" ? "admin" : "assistant", senderName: message.senderName, text: message.text, durationMs };
     setTyping(event); await new Promise((resolve) => window.setTimeout(resolve, durationMs)); setMessages((current) => mergeMessages(current, [message])); setTyping(null);
-  };
+  }, []);
+  useEffect(() => {
+    if (!open || !sessionId || online) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/public/chat/${encodeURIComponent(sessionId)}`);
+        if (!response.ok) return;
+        const payload = await response.json() as ApiResponse<{ messages: ChatMessage[] }>;
+        const known = new Set(messages.map((message) => message._id).filter(Boolean));
+        const replies = payload.data.messages.filter((message) => message.sender === "admin" && message._id && !known.has(message._id));
+        for (const message of replies) {
+          if (cancelled) return;
+          await revealReply(message);
+        }
+      } catch { /* Keep the local assistant usable while the API reconnects. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 4_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [messages, online, open, revealReply, sessionId]);
   const send = async (event?: FormEvent, preset?: string) => {
     event?.preventDefault(); const text = (preset ?? input).trim(); if (!text || sending || !sessionId) return; setInput(""); setSending(true);
     if (socketRef.current?.connected) { socketRef.current.emit("visitor:message", { text, page: location.pathname }, () => setSending(false)); setTimeout(() => setSending(false), 5000); return; }

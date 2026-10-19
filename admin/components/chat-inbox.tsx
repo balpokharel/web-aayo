@@ -29,6 +29,7 @@ export function ChatInbox() {
   const loadMessages = useCallback(async (id: string) => { if (!id) return; try { const result = await api<{ conversation: Conversation; messages: Message[] }>(`/admin/chat/${id}/messages`); setMessages(result.messages); setConversations((current) => current.map((item) => item._id === id ? { ...item, ...result.conversation, unreadByAdmin: 0 } : item)); socketRef.current?.emit("admin:join", { conversationId: id }); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load messages"); } }, []);
   useEffect(() => { void loadConversations(); const timer = window.setInterval(() => void loadConversations(), 15_000); return () => window.clearInterval(timer); }, [loadConversations]);
   useEffect(() => { if (selectedId) void loadMessages(selectedId); }, [selectedId, loadMessages]);
+  useEffect(() => { if (!selectedId || online) return; const timer = window.setInterval(() => void loadMessages(selectedId), 4_000); return () => window.clearInterval(timer); }, [loadMessages, online, selectedId]);
   useEffect(() => {
     const socket = io(`${API_URL}/chat`, { withCredentials: true, transports: ["websocket", "polling"] }); socketRef.current = socket;
     socket.on("connect", () => { setOnline(true); if (selectedId) socket.emit("admin:join", { conversationId: selectedId }); }); socket.on("disconnect", () => setOnline(false));
