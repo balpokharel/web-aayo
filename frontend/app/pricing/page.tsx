@@ -1,0 +1,8 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
+import { getPackages } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Pricing", description: "Flexible Web Aayo website and digital growth engagements, scoped clearly around your goals." };
+export default async function PricingPage() { const packages = await getPackages(); return <main><PageHero eyebrow="Pricing" title="Clear scope before work begins." body="Good work starts with a shared understanding of the outcome, constraints and effort. These engagement types are a starting point—not a one-size-fits-all price list." /><section className="section shell"><div className="pricing-grid pricing-page-grid">{packages.map((plan) => <article key={plan.slug} className={`pricing-card ${plan.recommended ? "pricing-card-recommended" : ""}`}>{plan.recommended && <span className="recommended-label">Recommended</span>}<p className="plan-kicker">{plan.duration}</p><h2>{plan.name}</h2><p>{plan.description}</p><div className="plan-price">{plan.priceMode === "contact" ? "Let’s scope it" : `${plan.priceMode === "starting" ? "From " : ""}${plan.currency} ${plan.startingPrice?.toLocaleString()}`}</div><ul>{plan.features.map((feature) => <li key={feature}><CheckCircle2 size={17} />{feature}</li>)}</ul><Link className={plan.recommended ? "button" : "button button-secondary"} href="/get-a-quote">Get a tailored quote <ArrowRight size={17} /></Link></article>)}</div><p className="pricing-note">All pricing is confirmed in a written proposal. Taxes, third-party licenses, media spend and optional ongoing services are shown separately.</p></section></main>; }

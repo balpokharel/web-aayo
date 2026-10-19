@@ -1,0 +1,5 @@
+import { BadRequestException, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+
+@Injectable()
+export class BotProtectionService { constructor(private readonly config: ConfigService) {} async verify(token: string | undefined, remoteIp?: string) { const secret = this.config.get<string>("TURNSTILE_SECRET_KEY"); if (!secret && this.config.get("NODE_ENV") !== "production") return; if (!secret) throw new ServiceUnavailableException("Bot protection is not configured"); if (!token) throw new BadRequestException("Bot verification is required"); const body = new URLSearchParams({ secret, response: token, ...(remoteIp ? { remoteip: remoteIp } : {}) }); const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body, signal: AbortSignal.timeout(5000) }); const result = await response.json() as { success: boolean }; if (!result.success) throw new BadRequestException("Bot verification failed"); } }

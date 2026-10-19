@@ -1,0 +1,6 @@
+import type { Metadata } from "next";
+import { QuoteForm } from "@/components/quote-form";
+import { PageHero } from "@/components/page-hero";
+
+export const metadata: Metadata = { title: "Get a Quote", description: "Start a website, e-commerce, design or digital marketing project with Web Aayo." };
+export default function QuotePage() { return <main><PageHero eyebrow="Start a project" title="A useful brief begins with the business goal." body="Share what you know. It is completely fine if the scope, budget or exact solution is still taking shape." /><section className="section shell form-layout"><aside><p className="section-eyebrow">What happens next</p><ol><li><span>01</span><div><strong>We review the brief</strong><p>A senior team member reads the context and identifies the important questions.</p></div></li><li><span>02</span><div><strong>We talk it through</strong><p>A short conversation aligns the goal, scope, constraints and timing.</p></div></li><li><span>03</span><div><strong>You get a clear proposal</strong><p>The proposal shows the recommended approach, deliverables, timeline and investment.</p></div></li></ol><p className="privacy-note">Your information is used only to respond to this request. We do not sell contact details.</p></aside><QuoteForm /></section></main>; }

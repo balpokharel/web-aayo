@@ -1,0 +1,6 @@
+import { ArgumentsHost, Catch, HttpException, HttpStatus, type ExceptionFilter } from "@nestjs/common";
+import type { Request, Response } from "express";
+import { Logger } from "nestjs-pino";
+
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter { constructor(private readonly logger: Logger) {} catch(error: unknown, host: ArgumentsHost) { const context = host.switchToHttp(); const response = context.getResponse<Response>(); const request = context.getRequest<Request & { id?: string; user?: { sub?: string } }>(); const status = error instanceof HttpException ? error.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR; const body = error instanceof HttpException ? error.getResponse() : null; const message = typeof body === "string" ? body : body && typeof body === "object" && "message" in body ? (body as { message: string | string[] }).message : status === 500 ? "An unexpected error occurred" : "Request failed"; this.logger.error({ requestId: request.id, route: request.url, method: request.method, status, actorId: request.user?.sub, error: error instanceof Error ? error.message : String(error) }, "request_failed"); response.status(status).json({ success: false, message: Array.isArray(message) ? "Validation failed" : message, errors: Array.isArray(message) ? message : [] }); } }
